@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book an Appointment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Colours: change these to rebrand ===== */
+    :root {
+      --bg: #0e0e0e;
+      --card: #171717;
+      --border: #2a2a2a;
+      --text: #ffffff;
+      --muted: #a0a0a0;
+      --accent: #ff832a;
+      --accent-text: #000000;
+      --error: #ff4d4d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 2rem;
+    }
+
+    h1 { margin: 0 0 0.25rem; font-size: 1.8rem; }
+    .sub { margin: 0 0 1.75rem; color: var(--muted); }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.8rem;
+      font: inherit;
+      font-size: 0.95rem;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    input[type="date"] { color-scheme: dark; }
+
+    /* Service cards */
+    .services { display: grid; gap: 0.5rem; }
+    .service {
+      display: flex; justify-content: space-between; align-items: center;
+      border: 1px solid var(--border); padding: 0.8rem 1rem; cursor: pointer;
+      margin: 0; font-size: 0.95rem; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text);
+    }
+    .service input { display: none; }
+    .service:has(input:checked) { border-color: var(--accent); background: rgba(255, 131, 42, 0.08); }
+    .service small { color: var(--muted); }
+    .price { font-weight: 700; }
+
+    /* Time slots */
+    .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; }
+    .slot {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      padding: 0.6rem 0; font: inherit; cursor: pointer;
+    }
+    .slot:hover:not(:disabled) { border-color: var(--accent); }
+    .slot.selected { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+    .slot:disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+    .hint { color: var(--muted); font-size: 0.9rem; margin: 0; grid-column: 1 / -1; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+    @media (max-width: 480px) { .row { grid-template-columns: 1fr; } .card { padding: 1.5rem 1.25rem; } }
+
+    .submit {
+      width: 100%; margin-top: 1.75rem; padding: 1rem;
+      background: var(--accent); color: var(--accent-text); border: none;
+      font: inherit; font-weight: 700; letter-spacing: 1px; cursor: pointer;
+    }
+    .submit:disabled { opacity: 0.6; cursor: wait; }
+    .error { color: var(--error); font-weight: 600; font-size: 0.9rem; margin: 0.75rem 0 0; display: none; }
+
+    /* Success pop-up */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85);
+      display: none; justify-content: center; align-items: center; padding: 1rem; z-index: 10;
+    }
+    .overlay .box { background: var(--card); border: 1px solid var(--border); padding: 2rem; max-width: 420px; width: 100%; }
+    .overlay h2 { margin-top: 0; }
+    .overlay p { color: var(--muted); line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+  <main class="card">
+    <h1>Book an appointment</h1>
+    <p class="sub">Pick a service, then choose a day and time that suits you.</p>
+
+    <form id="booking-form">
+
+      <!-- 1. SERVICE (edit names and prices here) -->
+      <label>Service</label>
+      <div class="services">
+        <label class="service"><input type="radio" name="service" value="Wash & Blow-dry" required>
+          <span>Wash &amp; Blow-dry<br><small>45 mins</small></span><span class="price">£35</span></label>
+        <label class="service"><input type="radio" name="service" value="Silk Press">
+          <span>Silk Press<br><small>1 hr 30 mins</small></span><span class="price">£65</span></label>
+        <label class="service"><input type="radio" name="service" value="Braids">
+          <span>Braids<br><small>3 hrs</small></span><span class="price">£120</span></label>
+        <label class="service"><input type="radio" name="service" value="Trim">
+          <span>Trim<br><small>30 mins</small></span><span class="price">£20</span></label>
+      </div>
+
+      <!-- 2. DATE -->
+      <label for="date">Date</label>
+      <input type="date" id="date" name="date" required>
+
+      <!-- 3. TIME (buttons are created by the script below) -->
+      <label>Time</label>
+      <div id="slots" class="slots"><p class="hint">Pick a date to see available times.</p></div>
+      <input type="hidden" id="time" name="time">
+
+      <!-- 4. YOUR DETAILS -->
+      <div class="row">
+        <div><label for="name">Name</label><input id="name" name="name" required></div>
+        <div><label for="phone">Phone</label><input id="phone" name="phone" type="tel"></div>
+      </div>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required>
+
+      <label for="notes">Notes (optional)</label>
+      <textarea id="notes" name="notes" rows="3" placeholder="Hair length, allergies, anything we should know"></textarea>
+
+      <button type="submit" class="submit">BOOK NOW</button>
+      <p id="error" class="error"></p>
+    </form>
+  </main>
+
+  <!-- SUCCESS POP-UP -->
+  <div id="success" class="overlay">
+    <div class="box">
+      <h2>You're booked in!</h2>
+      <p id="success-text"></p>
+      <p>We've sent a confirmation to your email.</p>
+      <button type="button" class="submit" id="close-success">CLOSE</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== SETTINGS: change these =====
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwXQPD87lf-3-ehw3K1QYkl-ekST131cegSeQ05zbMdqzANZuB3fkKjn8McHG0k7SEtiA/exec"; // the /exec link from Apps Script
+    const OPENING_TIMES = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+    const CLOSED_DAYS = [0];  // 0 = Sunday, 1 = Monday ... 6 = Saturday
+
+    const form      = document.getElementById('booking-form');
+    const dateInput = document.getElementById('date');
+    const timeInput = document.getElementById('time');
+    const slotsBox  = document.getElementById('slots');
+    const errorMsg  = document.getElementById('error');
+    const submitBtn = form.querySelector('.submit');
+    const success   = document.getElementById('success');
+
+    // Can't book in the past: today is the earliest date
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    dateInput.min = todayStr;
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.style.display = msg ? 'block' : 'none';
+    }
+
+    // When a date is picked: ask Google which times are taken, then draw the time buttons
+    async function loadSlots() {
+      timeInput.value = '';
+      showError('');
+      const date = dateInput.value;
+      if (!date) return;
+
+      const [y, m, d] = date.split('-').map(Number);
+      if (CLOSED_DAYS.includes(new Date(y, m - 1, d).getDay())) {
+        slotsBox.innerHTML = '<p class="hint">Sorry, we\'re closed that day. Please pick another date.</p>';
+        return;
+      }
+
+      slotsBox.innerHTML = '<p class="hint">Checking availability...</p>';
+      let taken = [];
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL + '?date=' + date);
+        taken = (await res.json()).taken || [];
+      } catch (err) {
+        slotsBox.innerHTML = '<p class="hint">Couldn\'t load times. Please refresh and try again.</p>';
+        return;
+      }
+
+      // Today: hide times that have already passed
+      const now = new Date();
+      const nowTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+      slotsBox.innerHTML = '';
+      OPENING_TIMES.forEach(time => {
+        if (date === todayStr && time <= nowTime) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'slot';
+        btn.textContent = time;
+        btn.disabled = taken.includes(time);
+        btn.addEventListener('click', () => {
+          slotsBox.querySelectorAll('.slot').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          timeInput.value = time;
+        });
+        slotsBox.appendChild(btn);
+      });
+
+      if (!slotsBox.children.length || slotsBox.querySelectorAll('.slot:not(:disabled)').length === 0) {
+        slotsBox.innerHTML = '<p class="hint">Fully booked. Please pick another date.</p>';
+      }
+    }
+    dateInput.addEventListener('change', loadSlots);
+
+    // Send the booking
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showError('');
+      if (!timeInput.value) { showError('Please pick a time.'); return; }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'BOOKING...';
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: new FormData(form) });
+        const data = await res.json();
+        if (!data.success) {
+          showError(data.message);
+          loadSlots(); // refresh, in case someone else just took that slot
+          return;
+        }
+        const service = form.querySelector('input[name="service"]:checked').value;
+        const niceDate = new Date(dateInput.value + 'T12:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+        document.getElementById('success-text').textContent = service + ' on ' + niceDate + ' at ' + timeInput.value + '.';
+        success.style.display = 'flex';
+        form.reset();
+        slotsBox.innerHTML = '<p class="hint">Pick a date to see available times.</p>';
+      } catch (err) {
+        showError('Something went wrong. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'BOOK NOW';
+      }
+    });
+
+    document.getElementById('close-success').addEventListener('click', () => {
+      success.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
